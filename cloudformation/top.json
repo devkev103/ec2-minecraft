@@ -1,0 +1,136 @@
+{
+    "Description": "Create all the AWS infrastructure needed to run your own minecraft server",
+    "Parameters": {
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Choose an existing Key Pair"
+        },
+        "InstanceType": {
+            "Type": "String",
+            "Default": "t2.large",
+            "AllowedValues": [
+                "t2.large"
+            ],
+            "Description": "Instance Type = how big do you want your server to be"
+        },
+        "VersionAMI": {
+            "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+            "Default": "/aws/service/canonical/ubuntu/server/21.10/stable/current/amd64/hvm/ebs-gp2/ami-id",
+            "Description": "Specify SSM EC2 ImageId string for Ubuntu Server AMI that should be used."
+        },
+        "VolumeSize": {
+            "Type": "Number",
+            "Default": "30",
+            "Description": "How big you want your EBS volumne to be"
+        },
+        "S3BucketName":{
+            "Type": "String",
+            "Default": "devkev103-minecraft-ohio",
+            "Description": "The name of the S3 bucket where we have our CloudFormation scripts"
+        }
+    },
+    "Resources": {
+        "CreateEC2Resources": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": [
+                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/create-minecraft-ec2-resources.json",
+                        {
+                            "BUCKETNAME": {
+                                "Ref": "S3BucketName"
+                            }
+                        }
+                    ]
+                },
+                "Parameters": {
+                    "KeyName": {
+                        "Ref": "KeyName"
+                    },
+                    "InstanceType": {
+                        "Ref": "InstanceType"
+                    },
+                    "VolumeSize": {
+                        "Ref": "VolumeSize"
+                    },
+                    "AMIID": {
+                        "Ref": "VersionAMI"
+                    }
+                }
+            }
+        },
+        "CreateLambdaIAMRole": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": [
+                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/create-lambda-role.json",
+                        {
+                            "BUCKETNAME": {
+                                "Ref": "S3BucketName"
+                            }
+                        }
+                    ]
+                },
+                "Parameters": {
+                    "RoleName": {
+                        "Fn::Join": [
+                            "", [
+                              {
+                                "Ref": "S3BucketName"
+                              },
+                              "-role"
+                            ]
+                          ]
+                    }
+                }
+            }
+        },
+        "CreateLambda": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": [
+                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/lambda-create-swap-routetable.json",
+                        {
+                            "BUCKETNAME": {
+                                "Ref": "S3BucketName"
+                            }
+                        }
+                    ]
+                },
+                "Parameters": {
+                    "S3Bucket": {
+                        "Ref": "S3BucketName"
+                    },
+                    "LambdaRoleArn": {
+                        "Fn::GetAtt": [
+                            "CreateLambdaIAMRole",
+                            "Outputs.Arn"
+                        ]
+                    }
+                }
+            }
+        },
+        "SwapRouteTable": {
+            "Type": "Custom::SwapRouteTable",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "CreateLambda",
+                        "Outputs.LambdaSwapRouteTableArn"
+                    ]
+                },
+                "Region": {
+                    "Ref": "AWS::Region"
+                },
+                "VpcId": {
+                    "Fn::GetAtt": [
+                        "CreateEC2Resources",
+                        "Outputs.VpcId"
+                    ]
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,246 @@
+{
+    "Description": "Create all the AWS infrastructure needed to run your own minecraft server",
+    "Parameters": {
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Choose an existing Key Pair"
+        },
+        "InstanceType": {
+            "Type": "String",
+            "Default": "t2.large",
+            "AllowedValues": [
+                "t2.large"
+            ],
+            "Description": "Instance Type = how big do you want your server to be"
+        },
+        "VolumeSize": {
+            "Type": "Number",
+            "Default": "30",
+            "Description": "How big you want your EBS volumne to be"
+        },
+        "AMIID": {
+            "Type": "String",
+            "Default": "/aws/service/canonical/ubuntu/server/21.10/stable/current/arm64/hvm/ebs-gp2/ami-id",
+            "Description": "Specify SSM EC2 ImageId string for Ubuntu Server AMI that should be used."
+        }
+    },
+    "Resources": {
+        "minecraftVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/28",
+                "EnableDnsHostnames": true,
+                "EnableDnsSupport": true,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-vpc"
+                    }
+                ]
+            }
+        },
+        "minecraftIG": {
+            "Type": "AWS::EC2::InternetGateway",
+            "DependsOn": "minecraftVPC",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-ig"
+                    }
+                ]
+            }
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "DependsOn": [
+                "minecraftVPC",
+                "minecraftIG"
+            ],
+            "Properties": {
+                "VpcId": {
+                    "Ref": "minecraftVPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "minecraftIG"
+                }
+            }
+        },
+        "minecraftRT": {
+            "Type": "AWS::EC2::RouteTable",
+            "DependsOn": "minecraftVPC",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-rt"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "minecraftVPC"
+                }
+            }
+        },
+        "addRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": [
+                "minecraftRT",
+                "minecraftIG"
+            ],
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "RouteTableId": {
+                    "Ref": "minecraftRT"
+                },
+                "GatewayId": {
+                    "Ref": "minecraftIG"
+                }
+            }
+        },
+        "minecraftSubnet": {
+            "Type": "AWS::EC2::Subnet",
+            "DependsOn": "minecraftVPC",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "minecraftVPC"
+                },
+                "CidrBlock": "10.0.0.0/28",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-subnet"
+                    }
+                ]
+            }
+        },
+        "minecraftSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "DependsOn": "minecraftVPC",
+            "Properties": {
+                "GroupName": "minecraft",
+                "GroupDescription": "Opens ports for minecraft, ssh, and ping",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "Description": "ssh",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 25565,
+                        "ToPort": 25565,
+                        "Description": "minecraft",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 19132,
+                        "ToPort": 19133,
+                        "Description": "minecraft",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "udp",
+                        "FromPort": 25565,
+                        "ToPort": 25565,
+                        "Description": "minecraft",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": 8,
+                        "ToPort": -1,
+                        "Description": "ping",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "minecraftVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-sg"
+                    }
+                ]
+            }
+        },
+        "minecraftEC2": {
+            "Type": "AWS::EC2::Instance",
+            "DependsOn": [
+                "minecraftSubnet",
+                "minecraftSG"
+            ],
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "VolumeType": "gp2",
+                            "VolumeSize": {
+                                "Ref": "VolumeSize"
+                            },
+                            "DeleteOnTermination": "false",
+                            "Encrypted": "true"
+                        }
+                    }
+                ],
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "ImageId": {
+                    "Ref": "AMIID"
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "Monitoring": "false",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-ec2"
+                    }
+                ],
+                "NetworkInterfaces": [
+                    {
+                        "SubnetId": {
+                            "Ref": "minecraftSubnet"
+                        },
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "GroupSet": [
+                            {
+                                "Ref": "minecraftSG"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "minecraftEIP": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": "minecraftEC2",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "minecraftEC2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-eip"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "VpcId": {
+            "Description": "The VpcId created in this script",
+            "Value": {
+                "Ref": "minecraftVPC"
+            }
+        }
+    }
+}

@@ -1,0 +1,43 @@
+{
+    "Description": "AWS Lambda function",
+    "Parameters": {
+        "S3Bucket": {
+            "Type": "String",
+            "Description": "S3 bucket where lambda function resides"
+        },
+        "LambdaRoleArn": {
+            "Type": "String",
+            "Description": "Lambda Role created in IAM stack"
+        }
+    },
+    "Resources": {
+        "SwapRouteTableFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Handler": "swap-routetable.lambda_handler",
+                "Role": {
+                    "Ref": "LambdaRoleArn"
+                },
+                "Code": {
+                    "S3Bucket": {
+                        "Ref": "S3Bucket"
+                    },
+                    "S3Key": "lambda/swap-routetable.zip"
+                },
+                "Timeout": "10",
+                "Runtime": "python3.7"
+            }
+        }
+    },
+    "Outputs": {
+        "LambdaSwapRouteTableArn": {
+            "Description": "Lambda swap route table function arn",
+            "Value": {
+                "Fn::GetAtt": [
+                    "SwapRouteTableFunction",
+                    "Arn"
+                ]
+            }
+        }
+    }
+}
