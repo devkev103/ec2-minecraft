@@ -68,7 +68,10 @@
         },
         "minecraftRT": {
             "Type": "AWS::EC2::RouteTable",
-            "DependsOn": "minecraftVPC",
+            "DependsOn": [
+                "minecraftVPC",
+                "AttachGateway"
+            ],
             "Properties": {
                 "Tags": [
                     {

@@ -29,7 +29,8 @@
                     ]
                 },
                 "ManagedPolicyArns" : [ 
-                    "arn:aws:iam::aws:policy/AWSLambdaExecute" 
+                    "arn:aws:iam::aws:policy/AWSLambdaExecute",
+                    "arn:aws:iam::aws:policy/AmazonVPCFullAccess" 
                 ],
                 "RoleName" : {
                     "Ref": "RoleName"

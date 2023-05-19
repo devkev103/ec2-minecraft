@@ -26,16 +26,34 @@ Go into the EC2 Service and look for `Key Pair`. Create a new key pair with opti
 
 ## Creating the VPC and EC2 ##
 
-Head back over to CloudFormation, and paste the copied URL into the parameter field "Amazon S3 URL"
+Head back over to CloudFormation, and paste the copied URL into the parameter field "Amazon S3 URL". Next -> Next -> Check the two "I acknowledge that AWS CloudFormation ..." -> Submit.
 
-## How Much Will This Cost me? ##
+You will then have your minecraft server ready to go!
 
-https://instances.vantage.sh/
+## The Final Steps ##
 
-## Side Note ##
+1.) Add yourself 
 
-I know a lot of we could use the CLI instead, but I chose not to do this for simplicity sake.
+Get the Public IP address of the server
 
+## Common Questions ##
 
+### How to Connect to the Minecraft Server ##
 
-AUTH Server: https://authserver.mojang.com/
+You will need the public IP address for hte EC2 instance you created. You can find this in the EC2 console under `Public IPv4 address`
+
+### How Much Will This Cost me? ###
+
+The instance running will cost you [approximately $0.09 per hour](https://aws.amazon.com/ec2/pricing/on-demand/). When you are done playing on the server, shut it down to save money.
+
+### What is the Server Capacity? ###
+
+From my experience, two people at one time played fine on the server. I have never tried more than two.
+
+## TODO! ##
+
+* add bootstrapping of EC2 instance with minecraft
+* add way to deploy with cli/powershell
+* add a mechanism to shutoff/turn on instance
+* configure better security practices - Least Privilege Strategy
+* launch script with cli/powershell instead of using the console.
