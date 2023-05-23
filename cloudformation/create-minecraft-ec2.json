@@ -98,25 +98,30 @@
                         "Fn::Join": [
                             "",
                             [
-                                "#!/bin/bash -x", "\n",
+                                "#!/bin/bash -xe", "\n",
                                 "sudo apt-get update;", "\n",
+                                "sudo apt-get -y install python3-pip;", "\n",
+                                "sudo pip3 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz;", "\n",
                                 "sudo apt-get install openjdk-18-jdk-headless -y;", "\n",
-                                "sudo wget -P /opt https://piston-data.mojang.com/v1/objects/8f3112a1049751cc472ec13e397eade5336ca7ae/server.jar;", "\n",
+                                "mkdir -p /opt/minecraft/;", "\n",
+                                "sudo wget -P /opt/minecraft/ https://piston-data.mojang.com/v1/objects/8f3112a1049751cc472ec13e397eade5336ca7ae/server.jar;", "\n",
                                 "sudo echo 'eula=",
                                 {
                                     "Ref": "AcceptEULA"
                                 },
-                                "' >> eula.txt;", "\n", 
-                                "/opt/aws/bin/cfn-signal -e $? ",
+                                "' >> /opt/minecraft/eula.txt;", "\n", 
+                                "/usr/local/bin/cfn-signal -e $? ",
                                 " --stack ",
                                 {
                                     "Ref": "AWS::StackName"
                                 },
-                                " --resource EC2 ",
+                                " --resource minecraftEC2 ",
                                 " --region ",
                                 {
                                     "Ref": "AWS::Region"
-                                }, "\n"
+                                }, "\n",
+                                "cd /opt/minecraft/;", "\n",
+                                "java -Xmx7G -Xms1G -jar /opt/minecraft/server.jar nogui;", "\n"
                             ]
                         ]
                     }

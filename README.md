@@ -72,3 +72,4 @@ If you fill out `<YOUR PUBLIC IP>/32` in the CloudFormation template, only you c
 * add way to deploy with cli/powershell
 * add a mechanism to shutoff/turn on instance
 * configure better security practices for IAM - Least Privilege Strategy
+* setup EC2 connect
