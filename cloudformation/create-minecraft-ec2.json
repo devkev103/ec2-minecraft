@@ -1,0 +1,148 @@
+{
+    "Description": "Create all the AWS infrastructure needed to run your own minecraft server",
+    "Parameters": {
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Choose an existing Key Pair"
+        },
+        "InstanceType": {
+            "Type": "String",
+            "Default": "t2.large",
+            "AllowedValues": [
+                "t2.large"
+            ],
+            "Description": "Instance Type = how big do you want your server to be"
+        },
+        "VolumeSize": {
+            "Type": "Number",
+            "Default": "30",
+            "Description": "How big you want your EBS volumne to be"
+        },
+        "AMIID": {
+            "Type": "String",
+            "Default": "ami-024e6efaf93d85776",
+            "Description": "Specify AMI-ID string for Ubuntu instance"
+        }, 
+        "AccessIP": {
+            "Type": "String",
+            "Default": "0.0.0.0/0",
+            "Description": "Fill this in with your IP address appending /32, this ensures ONLY you can access the the server - 12.34.45.67/32. By default, anybody can access server - 0.0.0.0/0. Find your IP here: https://www.whatismyip.com/"
+        },
+        "AcceptEULA": {
+            "Type": "String",
+            "Default": "false",
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "Description": "Accept the EULA to start the minecraft server"
+        },
+        "SubnetId": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "The ID of the subnet the instance will be created in"
+        }, 
+        "SecurityGroupId": {
+            "Type": "AWS::EC2::SecurityGroup::Id",
+            "Description": "The ID of the security group that will be attached to the instance"
+        }
+    },
+    "Resources": {
+        "minecraftEC2": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "VolumeType": "gp2",
+                            "VolumeSize": {
+                                "Ref": "VolumeSize"
+                            },
+                            "DeleteOnTermination": "true",
+                            "Encrypted": "true"
+                        }
+                    }
+                ],
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "ImageId": {
+                    "Ref": "AMIID"
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "Monitoring": "false",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-ec2"
+                    }
+                ],
+                "NetworkInterfaces": [
+                    {
+                        "SubnetId": {
+                            "Ref": "SubnetId"
+                        },
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "GroupSet": [
+                            {
+                                "Ref": "SecurityGroupId"
+                            }
+                        ]
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -x", "\n",
+                                "sudo apt-get update;", "\n",
+                                "sudo apt-get install openjdk-18-jdk-headless -y;", "\n",
+                                "sudo wget -P /opt https://piston-data.mojang.com/v1/objects/8f3112a1049751cc472ec13e397eade5336ca7ae/server.jar;", "\n",
+                                "sudo echo 'eula=",
+                                {
+                                    "Ref": "AcceptEULA"
+                                },
+                                "' >> eula.txt;", "\n", 
+                                "/opt/aws/bin/cfn-signal -e $? ",
+                                " --stack ",
+                                {
+                                    "Ref": "AWS::StackName"
+                                },
+                                " --resource EC2 ",
+                                " --region ",
+                                {
+                                    "Ref": "AWS::Region"
+                                }, "\n"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "CreationPolicy": {
+                "ResourceSignal": {
+                    "Count": "1",
+                    "Timeout": "PT5M"
+                }
+            }
+        },
+        "minecraftEIP": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": "minecraftEC2",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "minecraftEC2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "minecraft-eip"
+                    }
+                ]
+            }
+        }
+    }
+}

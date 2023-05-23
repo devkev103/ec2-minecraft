@@ -1,3 +1,16 @@
+- [EC2 Minecraft](#ec2-minecraft)
+  - [First Steps: Creating an S3 Bucket](#first-steps-creating-an-s3-bucket)
+  - [Creating a Key Pair](#creating-a-key-pair)
+  - [Creating the VPC and EC2](#creating-the-vpc-and-ec2)
+  - [Common Questions](#common-questions)
+    - [How to Connect to the Minecraft Server](#how-to-connect-to-the-minecraft-server)
+    - [How Much Will This Cost Me?](#how-much-will-this-cost-me)
+    - [What is the Server Capacity?](#what-is-the-server-capacity)
+    - [I Want to Completely Delete Everything](#i-want-to-completely-delete-everything)
+    - [How Secure is this Server?](#how-secure-is-this-server)
+  - [TODO!](#todo)
+
+
 # EC2 Minecraft #
 
 Welcome to the repository for creating an EC2 Minecraft server! This guide assumes you are completely new to EC2 and AWS in general. Lets get started!
@@ -8,7 +21,7 @@ Create an AWS account and login. Once logged in, change your region (top right-h
 
 Go to the CloudFormation Service - this is where we will be creating the infrastructre we need. 
 
-Create Stack -> Select Upload Template -> Choose file "s3-bucket-creation.json"
+Create Stack -> Select Upload Template -> Choose file "create-minecraft-s3-bucket.json"
 
 Fill in a stack name of "Creation-of-S3-[BUCKET NAME]"
 
@@ -28,32 +41,34 @@ Go into the EC2 Service and look for `Key Pair`. Create a new key pair with opti
 
 Head back over to CloudFormation, and paste the copied URL into the parameter field "Amazon S3 URL". Next -> Next -> Check the two "I acknowledge that AWS CloudFormation ..." -> Submit.
 
-You will then have your minecraft server ready to go!
-
-## The Final Steps ##
-
-1.) Add yourself 
-
-Get the Public IP address of the server
+It will take approximately 5 minutes and then you will then have your minecraft server ready to go!
 
 ## Common Questions ##
 
 ### How to Connect to the Minecraft Server ##
 
-You will need the public IP address for hte EC2 instance you created. You can find this in the EC2 console under `Public IPv4 address`
+You will need the public IP address for the EC2 instance you created. In the Minecraft launcher, you will use the servers's public IP address as "Server Address". You can find the server's public IP address in the EC2 console under `Public IPv4 address`
 
-### How Much Will This Cost me? ###
+### How Much Will This Cost Me? ###
 
-The instance running will cost you [approximately $0.09 per hour](https://aws.amazon.com/ec2/pricing/on-demand/). When you are done playing on the server, shut it down to save money.
+The instance running will cost you [approximately $0.09 per hour](https://aws.amazon.com/ec2/pricing/on-demand/). **When you are done playing on the server, shut it down to save money.**
 
 ### What is the Server Capacity? ###
 
 From my experience, two people at one time played fine on the server. I have never tried more than two.
 
+### I Want to Completely Delete Everything ###
+
+Head over to the CloudFormation Service in the region you created your stack. And delete the root of the stack, this will delete **most** resouces provisioned by this CloudFormation stack.
+
+By default, this stack keeps the EBS volumes so you can't accidently delete your world. In the VPC service, Route Table section, it will also fail to delete this as well because it is the main route table for the minecraft VPC. You can get around this by deleting it by hand and delete the CloudFormation Stack again.
+
+### How Secure is this Server? ###
+
+If you fill out `<YOUR PUBLIC IP>/32` in the CloudFormation template, only you can get to this server either for SSH'ing or connecting with the Minecraft launcher.
+
 ## TODO! ##
 
-* add bootstrapping of EC2 instance with minecraft
 * add way to deploy with cli/powershell
 * add a mechanism to shutoff/turn on instance
-* configure better security practices - Least Privilege Strategy
-* launch script with cli/powershell instead of using the console.
+* configure better security practices for IAM - Least Privilege Strategy

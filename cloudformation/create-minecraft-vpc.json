@@ -1,27 +1,10 @@
 {
-    "Description": "Create all the AWS infrastructure needed to run your own minecraft server",
+    "Description": "Create all the AWS infrastructure needed to run a Minecraft VPC",
     "Parameters": {
-        "KeyName": {
-            "Type": "AWS::EC2::KeyPair::KeyName",
-            "Description": "Choose an existing Key Pair"
-        },
-        "InstanceType": {
+        "AccessIP": {
             "Type": "String",
-            "Default": "t2.large",
-            "AllowedValues": [
-                "t2.large"
-            ],
-            "Description": "Instance Type = how big do you want your server to be"
-        },
-        "VolumeSize": {
-            "Type": "Number",
-            "Default": "30",
-            "Description": "How big you want your EBS volumne to be"
-        },
-        "AMIID": {
-            "Type": "String",
-            "Default": "/aws/service/canonical/ubuntu/server/21.10/stable/current/arm64/hvm/ebs-gp2/ami-id",
-            "Description": "Specify SSM EC2 ImageId string for Ubuntu Server AMI that should be used."
+            "Default": "0.0.0.0/0",
+            "Description": "Fill this in with your IP address appending /32, this ensures ONLY you can access the the server - 12.34.45.67/32. By default, anybody can access server - 0.0.0.0/0. Find your IP here: https://www.whatismyip.com/"
         }
     },
     "Resources": {
@@ -128,35 +111,45 @@
                         "FromPort": 22,
                         "ToPort": 22,
                         "Description": "ssh",
-                        "CidrIp": "0.0.0.0/0"
+                        "CidrIp": {
+                            "Ref": "AccessIP"
+                        }
                     },
                     {
                         "IpProtocol": "tcp",
                         "FromPort": 25565,
                         "ToPort": 25565,
                         "Description": "minecraft",
-                        "CidrIp": "0.0.0.0/0"
+                        "CidrIp": {
+                            "Ref": "AccessIP"
+                        }
                     },
                     {
                         "IpProtocol": "tcp",
                         "FromPort": 19132,
                         "ToPort": 19133,
                         "Description": "minecraft",
-                        "CidrIp": "0.0.0.0/0"
+                        "CidrIp": {
+                            "Ref": "AccessIP"
+                        }
                     },
                     {
                         "IpProtocol": "udp",
                         "FromPort": 25565,
                         "ToPort": 25565,
                         "Description": "minecraft",
-                        "CidrIp": "0.0.0.0/0"
+                        "CidrIp": {
+                            "Ref": "AccessIP"
+                        }
                     },
                     {
                         "IpProtocol": "icmp",
                         "FromPort": 8,
                         "ToPort": -1,
                         "Description": "ping",
-                        "CidrIp": "0.0.0.0/0"
+                        "CidrIp": {
+                            "Ref": "AccessIP"
+                        }
                     }
                 ],
                 "VpcId": {
@@ -169,80 +162,31 @@
                     }
                 ]
             }
-        },
-        "minecraftEC2": {
-            "Type": "AWS::EC2::Instance",
-            "DependsOn": [
-                "minecraftSubnet",
-                "minecraftSG"
-            ],
-            "Properties": {
-                "BlockDeviceMappings": [
-                    {
-                        "DeviceName": "/dev/xvda",
-                        "Ebs": {
-                            "VolumeType": "gp2",
-                            "VolumeSize": {
-                                "Ref": "VolumeSize"
-                            },
-                            "DeleteOnTermination": "false",
-                            "Encrypted": "true"
-                        }
-                    }
-                ],
-                "KeyName": {
-                    "Ref": "KeyName"
-                },
-                "ImageId": {
-                    "Ref": "AMIID"
-                },
-                "InstanceType": {
-                    "Ref": "InstanceType"
-                },
-                "Monitoring": "false",
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "minecraft-ec2"
-                    }
-                ],
-                "NetworkInterfaces": [
-                    {
-                        "SubnetId": {
-                            "Ref": "minecraftSubnet"
-                        },
-                        "AssociatePublicIpAddress": "true",
-                        "DeviceIndex": "0",
-                        "GroupSet": [
-                            {
-                                "Ref": "minecraftSG"
-                            }
-                        ]
-                    }
-                ]
-            }
-        },
-        "minecraftEIP": {
-            "Type": "AWS::EC2::EIP",
-            "DependsOn": "minecraftEC2",
-            "Properties": {
-                "InstanceId": {
-                    "Ref": "minecraftEC2"
-                },
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "minecraft-eip"
-                    }
-                ]
-            }
         }
     },
     "Outputs": {
         "VpcId": {
-            "Description": "The VpcId created in this script",
             "Value": {
-                "Ref": "minecraftVPC"
+                "Fn::GetAtt": [
+                    "minecraftVPC",
+                    "VpcId"
+                ]
+            }
+        },
+        "SubnetId": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "minecraftSubnet",
+                    "SubnetId"
+                ]
+            }
+        },
+        "SecurityGroupId": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "minecraftSG",
+                    "GroupId"
+                ]
             }
         }
     }

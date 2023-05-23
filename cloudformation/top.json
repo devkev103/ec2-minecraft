@@ -15,7 +15,7 @@
         },
         "VersionAMI": {
             "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-            "Default": "/aws/service/canonical/ubuntu/server/21.10/stable/current/amd64/hvm/ebs-gp2/ami-id",
+            "Default": "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id",
             "Description": "Specify SSM EC2 ImageId string for Ubuntu Server AMI that should be used."
         },
         "VolumeSize": {
@@ -27,15 +27,29 @@
             "Type": "String",
             "Default": "devkev103-minecraft-ohio",
             "Description": "The name of the S3 bucket where we have our CloudFormation scripts"
+        },
+        "AccessIP": {
+            "Type": "String",
+            "Default": "0.0.0.0/0",
+            "Description": "Fill this in with your IP address appending /32, this ensures ONLY you can access the the server - 12.34.45.67/32. By default, anybody can access server - 0.0.0.0/0. Find your IP here: https://www.whatismyip.com/"
+        },
+        "AcceptEULA": {
+            "Type": "String",
+            "Default": "false",
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "Description": "Accept the EULA to start the minecraft server"
         }
     },
     "Resources": {
-        "CreateEC2Resources": {
+        "CreateVPC": {
             "Type": "AWS::CloudFormation::Stack",
             "Properties": {
                 "TemplateURL": {
                     "Fn::Sub": [
-                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/create-minecraft-ec2-resources.json",
+                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/create-minecraft-vpc.json",
                         {
                             "BUCKETNAME": {
                                 "Ref": "S3BucketName"
@@ -44,17 +58,8 @@
                     ]
                 },
                 "Parameters": {
-                    "KeyName": {
-                        "Ref": "KeyName"
-                    },
-                    "InstanceType": {
-                        "Ref": "InstanceType"
-                    },
-                    "VolumeSize": {
-                        "Ref": "VolumeSize"
-                    },
-                    "AMIID": {
-                        "Ref": "VersionAMI"
+                    "AccessIP": {
+                        "Ref": "AccessIP"
                     }
                 }
             }
@@ -64,7 +69,7 @@
             "Properties": {
                 "TemplateURL": {
                     "Fn::Sub": [
-                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/create-lambda-role.json",
+                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/create-lambda-iam-role.json",
                         {
                             "BUCKETNAME": {
                                 "Ref": "S3BucketName"
@@ -91,7 +96,7 @@
             "Properties": {
                 "TemplateURL": {
                     "Fn::Sub": [
-                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/lambda-create-swap-routetable.json",
+                        "https://${BUCKETNAME}.s3.amazonaws.com/cloudformation/create-lambda-swap-routetable.json",
                         {
                             "BUCKETNAME": {
                                 "Ref": "S3BucketName"
@@ -126,7 +131,7 @@
                 },
                 "VpcId": {
                     "Fn::GetAtt": [
-                        "CreateEC2Resources",
+                        "CreateVPC",
                         "Outputs.VpcId"
                     ]
                 }
