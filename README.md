@@ -1,19 +1,27 @@
 - [EC2 Minecraft](#ec2-minecraft)
+    - [Side Note](#side-note)
   - [First Steps: Creating an S3 Bucket](#first-steps-creating-an-s3-bucket)
   - [Creating a Key Pair](#creating-a-key-pair)
   - [Creating the VPC and EC2](#creating-the-vpc-and-ec2)
+  - [Extra Configuration](#extra-configuration)
+    - [EC2 Instance Connect](#ec2-instance-connect)
   - [Common Questions](#common-questions)
     - [How to Connect to the Minecraft Server](#how-to-connect-to-the-minecraft-server)
     - [How Much Will This Cost Me?](#how-much-will-this-cost-me)
     - [What is the Server Capacity?](#what-is-the-server-capacity)
     - [I Want to Completely Delete Everything](#i-want-to-completely-delete-everything)
     - [How Secure is this Server?](#how-secure-is-this-server)
+    - [My Minecraft Server is Not Starting](#my-minecraft-server-is-not-starting)
   - [TODO!](#todo)
 
 
 # EC2 Minecraft #
 
 Welcome to the repository for creating an EC2 Minecraft server! This guide assumes you are completely new to EC2 and AWS in general. Lets get started!
+
+### Side Note ###
+
+As a side note, if you are already familar with VPC, Subnetting, Security Groups, and Cloudformation, you can use the `create-minecraft-ec2.json` stack to just create the EC2 instance and none of the other infrastrure.
 
 ## First Steps: Creating an S3 Bucket ##
 
@@ -43,6 +51,19 @@ Head back over to CloudFormation, and paste the copied URL into the parameter fi
 
 It will take approximately 5 minutes and then you will then have your minecraft server ready to go!
 
+## Extra Configuration ##
+
+### EC2 Instance Connect ###
+
+Follow [this](https://repost.aws/knowledge-center/ec2-instance-connect-troubleshooting) guide on how to setup/troubleshoot EC2 Instance Connect.
+
+If you have been following this guide, edit Inbound Rules for the minecraft Security Group, and add a SSH rule from an AWS IP. 
+
+```powershell
+# get AWS IP range here; be sure to specify your specific region
+Get-AWSPublicIpAddressRange -Region us-east-2 -ServiceKey EC2_INSTANCE_CONNECT | select IpPrefix
+```
+
 ## Common Questions ##
 
 ### How to Connect to the Minecraft Server ##
@@ -61,15 +82,29 @@ From my experience, two people at one time played fine on the server. I have nev
 
 Head over to the CloudFormation Service in the region you created your stack. And delete the root of the stack, this will delete **most** resouces provisioned by this CloudFormation stack.
 
-By default, this stack keeps the EBS volumes so you can't accidently delete your world. In the VPC service, Route Table section, it will also fail to delete this as well because it is the main route table for the minecraft VPC. You can get around this by deleting it by hand and delete the CloudFormation Stack again.
+In the VPC service, Route Table section, it will also fail to delete this as well because it is the main route table for the minecraft VPC. You can get around this by deleting it by hand and delete the CloudFormation Stack again.
+
+**BEWARE**: If you delete the Cloudformation Stack it will also delete the world!
 
 ### How Secure is this Server? ###
 
-If you fill out `<YOUR PUBLIC IP>/32` in the CloudFormation template, only you can get to this server either for SSH'ing or connecting with the Minecraft launcher.
+**If** you fill out `<YOUR PUBLIC IP>/32` in the CloudFormation template, only you can get to this server either for SSH'ing or connecting with the Minecraft launcher.
+
+### My Minecraft Server is Not Starting ###
+
+Did you remember to accept the EULA agreement? If you did, execute this command to see the status and tail of the log for the `minecraftserver.service`
+
+```bash
+systemctl status minecraftserver
+```
+
+You can also try to start the server manually with `java -Xmx7G -Xms1G -jar /usr/local/minecraft/server.jar nogui;`
 
 ## TODO! ##
 
 * add way to deploy with cli/powershell
 * add a mechanism to shutoff/turn on instance
 * configure better security practices for IAM - Least Privilege Strategy
-* setup EC2 connect
+* break out Security Groups into it's own stack for reuseability
+* The service and start.sh are imbedded into the Cloudformation stack - download them from a repository instead
+* separate disk for minecraft data
